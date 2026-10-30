@@ -1,0 +1,21 @@
+[workspace]
+resolver = "3"
+members = ["crates/evie-core", "crates/evie"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/155xp/evie"
+
+[profile.release]
+opt-level = 3
+debug = "line-tables-only"
+codegen-units = 16
+
+# The engine is unusable unoptimized; keep debug builds fast to iterate on.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
