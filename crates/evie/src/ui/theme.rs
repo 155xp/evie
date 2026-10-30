@@ -1,19 +1,15 @@
-//! Colours, fonts and egui styling.
+//! Monochrome palette, fonts and egui styling.
 
 use egui::{Color32, FontData, FontDefinitions, FontFamily, FontId, RichText, Stroke, Visuals};
 use std::sync::Arc;
 
-pub const BG: Color32 = Color32::from_rgb(9, 11, 14);
-pub const PANEL: Color32 = Color32::from_rgb(14, 17, 22);
-pub const RAISED: Color32 = Color32::from_rgb(21, 25, 32);
-pub const BORDER: Color32 = Color32::from_rgb(32, 38, 48);
-pub const TEXT: Color32 = Color32::from_rgb(222, 227, 235);
-pub const DIM: Color32 = Color32::from_rgb(132, 142, 158);
-pub const FAINT: Color32 = Color32::from_rgb(78, 87, 101);
-pub const ACCENT: Color32 = Color32::from_rgb(45, 212, 191);
-pub const UP: Color32 = Color32::from_rgb(245, 166, 35);
-pub const DOWN: Color32 = Color32::from_rgb(236, 72, 153);
-pub const DANGER: Color32 = Color32::from_rgb(248, 113, 113);
+pub const BG: Color32 = Color32::from_rgb(0, 0, 0);
+pub const RAISED: Color32 = Color32::from_rgb(14, 14, 14);
+pub const HOVER: Color32 = Color32::from_rgb(26, 26, 26);
+pub const BORDER: Color32 = Color32::from_rgb(34, 34, 34);
+pub const TEXT: Color32 = Color32::from_rgb(242, 242, 242);
+pub const DIM: Color32 = Color32::from_rgb(140, 140, 140);
+pub const FAINT: Color32 = Color32::from_rgb(82, 82, 82);
 
 pub fn mono() -> FontFamily {
     FontFamily::Name("mono".into())
@@ -27,20 +23,10 @@ pub fn mono_text(s: impl Into<String>, size: f32) -> RichText {
     RichText::new(s).family(mono()).size(size)
 }
 
-pub fn heading(s: impl Into<String>) -> RichText {
-    RichText::new(s.into().to_uppercase()).family(strong()).size(10.5).color(DIM)
-}
-
-/// Colour for a signed, normalised activation in [-1, 1].
-pub fn act_color(v: f32) -> Color32 {
-    let t = v.abs().clamp(0.0, 1.0).sqrt();
-    let base = if v >= 0.0 { UP } else { DOWN };
-    lerp(RAISED, base, t)
-}
-
-pub fn lerp(a: Color32, b: Color32, t: f32) -> Color32 {
-    let m = |x: u8, y: u8| (x as f32 + (y as f32 - x as f32) * t).round() as u8;
-    Color32::from_rgb(m(a.r(), b.r()), m(a.g(), b.g()), m(a.b(), b.b()))
+/// Background for a token or cell with a signed activation in [-1, 1]: brighter = stronger.
+pub fn act_fill(v: f32) -> Color32 {
+    let t = v.abs().clamp(0.0, 1.0).powf(0.8);
+    Color32::from_white_alpha((t * 170.0) as u8)
 }
 
 fn system_cjk() -> Option<(Vec<u8>, u32)> {
@@ -77,40 +63,50 @@ pub fn install(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 
     let mut v = Visuals::dark();
-    v.panel_fill = PANEL;
+    v.panel_fill = BG;
     v.window_fill = RAISED;
-    v.extreme_bg_color = BG;
+    v.extreme_bg_color = RAISED;
     v.faint_bg_color = RAISED;
+    v.code_bg_color = RAISED;
     v.override_text_color = Some(TEXT);
-    v.selection.bg_fill = ACCENT.gamma_multiply(0.35);
-    v.selection.stroke = Stroke::new(1.0, ACCENT);
-    v.hyperlink_color = ACCENT;
+    v.selection.bg_fill = Color32::from_white_alpha(56);
+    v.selection.stroke = Stroke::new(1.0, TEXT);
+    v.hyperlink_color = TEXT;
     v.window_stroke = Stroke::new(1.0, BORDER);
+    v.window_shadow = egui::epaint::Shadow::NONE;
+    v.popup_shadow = egui::epaint::Shadow::NONE;
     v.widgets.noninteractive.bg_stroke = Stroke::new(1.0, BORDER);
     v.widgets.noninteractive.fg_stroke = Stroke::new(1.0, TEXT);
     v.widgets.inactive.bg_fill = RAISED;
-    v.widgets.inactive.weak_bg_fill = RAISED;
+    v.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
     v.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
-    v.widgets.hovered.bg_fill = Color32::from_rgb(28, 34, 43);
-    v.widgets.hovered.weak_bg_fill = Color32::from_rgb(28, 34, 43);
-    v.widgets.hovered.bg_stroke = Stroke::new(1.0, ACCENT.gamma_multiply(0.6));
-    v.widgets.active.bg_fill = Color32::from_rgb(34, 41, 52);
-    v.widgets.active.weak_bg_fill = Color32::from_rgb(34, 41, 52);
-    v.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
-    for w in [&mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
+    v.widgets.inactive.fg_stroke = Stroke::new(1.0, TEXT);
+    v.widgets.hovered.bg_fill = HOVER;
+    v.widgets.hovered.weak_bg_fill = HOVER;
+    v.widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::from_gray(70));
+    v.widgets.hovered.fg_stroke = Stroke::new(1.0, TEXT);
+    v.widgets.active.bg_fill = Color32::from_gray(40);
+    v.widgets.active.weak_bg_fill = Color32::from_gray(40);
+    v.widgets.active.bg_stroke = Stroke::new(1.0, TEXT);
+    v.widgets.active.fg_stroke = Stroke::new(1.0, TEXT);
+    v.widgets.open.weak_bg_fill = HOVER;
+    v.slider_trailing_fill = true;
+    for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
         w.corner_radius = 6.into();
+        w.expansion = 0.0;
     }
-    v.window_corner_radius = 10.into();
+    v.window_corner_radius = 8.into();
+    v.menu_corner_radius = 8.into();
     ctx.set_visuals_of(egui::Theme::Dark, v);
     ctx.set_theme(egui::Theme::Dark);
     ctx.all_styles_mut(|s| {
         s.spacing.item_spacing = egui::vec2(8.0, 6.0);
         s.spacing.button_padding = egui::vec2(10.0, 5.0);
-        s.spacing.slider_width = 150.0;
+        s.spacing.interact_size.y = 26.0;
         s.text_styles.insert(egui::TextStyle::Body, FontId::new(13.5, FontFamily::Proportional));
         s.text_styles.insert(egui::TextStyle::Button, FontId::new(13.0, FontFamily::Proportional));
         s.text_styles.insert(egui::TextStyle::Small, FontId::new(11.0, FontFamily::Proportional));
         s.text_styles.insert(egui::TextStyle::Monospace, FontId::new(12.5, mono()));
-        s.text_styles.insert(egui::TextStyle::Heading, FontId::new(17.0, strong()));
+        s.text_styles.insert(egui::TextStyle::Heading, FontId::new(16.0, strong()));
     });
 }

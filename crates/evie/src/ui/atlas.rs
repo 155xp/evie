@@ -314,9 +314,10 @@ impl AtlasView {
         self.pan + (p - rect.min) / self.zoom
     }
 
-    /// Zooms so the given neuron is centred and comfortably large.
+    /// Centres the neuron, zooming in just enough that its layer fills about half the view.
     pub fn focus(&mut self, rect: Rect, geo: &Geometry, layer: usize, neuron: usize) {
-        self.zoom = self.zoom.max(7.0);
+        let frame = (rect.height() * 0.55 / geo.tile_h as f32).min(rect.width() * 0.45 / geo.tile_w as f32);
+        self.zoom = self.zoom.max(frame).min(24.0);
         self.user_moved = true;
         let c = geo.cell_center(layer, neuron);
         self.pan = c - rect.size() * 0.5 / self.zoom;
