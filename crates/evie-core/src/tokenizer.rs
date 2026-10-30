@@ -114,7 +114,8 @@ impl Tok {
     }
 
     /// Token ids whose text, ignoring surrounding whitespace and case, equals `word`.
-    /// Falls back to the first token of " word" when the word is not a single token.
+    /// Falls back to the first token of " word" only when that token is most of the word, so a
+    /// multi-token word like "cosmonaut" doesn't drag in its generic prefix (" cos").
     pub fn word_tokens(&self, word: &str) -> Vec<u32> {
         let w = word.trim().to_lowercase();
         if w.is_empty() {
@@ -128,9 +129,11 @@ impl Tok {
             .map(|(i, _)| i as u32)
             .collect();
         if ids.is_empty() {
+            let len = w.chars().count();
             for variant in [format!(" {}", word.trim()), word.trim().to_string()] {
                 if let Ok(t) = self.encode(&variant)
                     && let Some(&first) = t.first()
+                    && self.display.get(first as usize).is_some_and(|d| d.trim().chars().count() * 10 >= len * 7)
                 {
                     ids.push(first);
                 }
