@@ -1,0 +1,6 @@
+/target
+*.log
+# Model weights, lenses and caches live in ~/.local/share/evie (or $EVIE_HOME), never in the repo.
+*.safetensors
+*.pt
+*.gguf
