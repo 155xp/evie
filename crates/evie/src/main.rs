@@ -32,6 +32,12 @@ struct Cli {
     /// Max tokens per reply.
     #[arg(long, default_value_t = 320)]
     max_tokens: usize,
+    /// Also generate the unsteered reply next to each steered one.
+    #[arg(long)]
+    compare: bool,
+    /// UI scale on top of the display's own (e.g. 1.5 for crisp screenshots).
+    #[arg(long)]
+    zoom: Option<f32>,
     /// Window size.
     #[arg(long, default_value_t = 1680.0)]
     width: f32,
@@ -132,7 +138,11 @@ fn main() -> anyhow::Result<()> {
     let (jtx, jrx) = crossbeam_channel::unbounded();
     let (atx, arx) = crossbeam_channel::unbounded();
     let shared = Arc::new(Shared::new(jtx, atx));
-    shared.chat.lock().settings.max_new = cli.max_tokens;
+    {
+        let mut c = shared.chat.lock();
+        c.settings.max_new = cli.max_tokens;
+        c.settings.compare = cli.compare;
+    }
     worker::spawn(shared.clone(), jrx);
     analyst::spawn(shared.clone(), arx);
     if let Some(id) = cli.model.clone().or_else(default_model) {
@@ -171,6 +181,16 @@ fn main() -> anyhow::Result<()> {
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };
-    eframe::run_native("evie", options, Box::new(move |cc| Ok(Box::new(ui::App::new(cc, shared, script)))))
+    let zoom = cli.zoom;
+    eframe::run_native(
+        "evie",
+        options,
+        Box::new(move |cc| {
+            if let Some(z) = zoom {
+                cc.egui_ctx.set_zoom_factor(z);
+            }
+            Ok(Box::new(ui::App::new(cc, shared, script)))
+        }),
+    )
         .map_err(|e| anyhow::anyhow!("{e}"))
 }
